@@ -7,6 +7,10 @@ import json
 from pysbd.utils import PySBDFactory
 import pysbd
 import altair as alt
+#from selenium import webdriver
+#from selenium.webdriver.common.by import By
+
+
 
 def main():
     link = st.text_input("YouTube video link", "https://www.youtube.com/watch?v=Up5VhPD2xZc")
@@ -40,7 +44,9 @@ def main():
     df_level['level'] = df_level['level'].str.replace('<NA>', '-', regex=False)
     df = pd.merge(df_level, df, on='base_word', how='right')
 
-    plotbar(df)
+    #df['translation'] = df.base_word.apply(lambda x: translate(x))
+
+    #plotbar(df)
     for p in select_pos:
         st.subheader(posdic[str(p)])
         filtered = df[df.pos == str(p)]
@@ -114,6 +120,22 @@ def get_sentances(text):
     doc = nlp(text)
     return st.write(list(doc.sents))
     # [My name is Jonas E. Smith., Please turn to p. 55.]
+
+def translate(word):
+    chrome_path = r"home/dr-robin/Dev/ytstudy/chromedriver"
+    driver = webdriver.Chrome(chrome_path)
+    try:
+        driver.get('https://papago.naver.com/')
+        xpath = '//*[@id="txtSource"]'
+        element = driver.find_element(By.XPATH, xpath)
+        element.click()
+        element.send_keys("{word)")
+        xpath = '//*[@id="txtTarget"][span]'
+        translated = driver.find_element(By.XPATH, xpath).text
+    except:
+        translated = "Not found"
+    return translated
+
 
 @st.cache
 def convert_df(df):
