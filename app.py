@@ -7,12 +7,26 @@ import json
 from pysbd.utils import PySBDFactory
 import pysbd
 import altair as alt
+import splitter
+import enchant
+from itertools import chain
+import more_itertools
+
 #from selenium import webdriver
 #from selenium.webdriver.common.by import By
 
 
 
 def main():
+    df_level = pd.read_csv("cambridge_britisheng.csv")
+    csv = convert_df(df_level)
+
+    st.download_button(
+         label="Download cambridge english word list",
+         data=csv,
+         file_name='Complete cambridge english word list.csv',
+         mime='text/csv',
+     )
     link = st.text_input("YouTube video link", "https://www.youtube.com/watch?v=Up5VhPD2xZc")
     link = link.split('v=')[-1]
     data = get_subs(link)
@@ -21,14 +35,38 @@ def main():
 
     #data = json.loads(data)
     text = convert(data)
+    #for t in text:
+    #    try:
+    #        splitter.split(t)
+
     text = ''.join(map(str,text))
+
     nlp = spacy.load("en_core_web_sm")
     doc = nlp(text)
+    spellcheck = enchant.Dict("en_US")
+    clean = ""
+    for token in doc:
+        if not spellcheck.check(token.text):
+            try:
+                splitwords = splitter.split(token.text)
+                splitwords = ' '.join(map(str,splitwords))
+                #st.write(splitwords)
+                clean = " ".join([clean, splitwords])
+                #st.write(splitwords, "these are split words")
+            except:
+                pass
+                #st.write(longwords, "these are long words")
+        else:
+            clean = " ".join([clean, token.text])
+    #
+    st.write(clean)
+    #doc = nlp(clean)
+    #st.write(len(spellchecked), ' words spell checked')
     pos = [(token.text, token.pos_) for token in doc]
     df = pd.DataFrame(pos, columns = ['word','pos'])
 
     select_pos = st.sidebar.multiselect('Parts of Speech',['SCONJ', 'PRON', 'VERB', 'PUNCT', 'AUX', 'PART', 'NOUN','DET', 'ADJ', 'PROPN', 'ADP', 'ADV','CCONJ','INTJ', 'NUM','SYM', 'X'],['VERB', 'ADJ','NOUN'])
-    add_selectbox = st.sidebar.slider('Word mentions', min_value=1,max_value=100, value=5, step=1)
+    add_selectbox = st.sidebar.slider('Word mentions', min_value=1,max_value=100, value=1, step=1)
     #drop rows that contain any value in the list
     values = ['PUNCT', 'NUM', 'X', 'SYM']
     df = df[df.pos.isin(values) == False]
@@ -50,10 +88,10 @@ def main():
     for p in select_pos:
         st.subheader(posdic[str(p)])
         filtered = df[df.pos == str(p)]
-
+        filtered.fillna('', inplace=True)
 		#Show table
         filtered = filtered[filtered.mentions >= add_selectbox]
-        st.dataframe(filtered)
+        st.write(filtered)
 
     #csv = convert_df(df)
     #st.download_button("Press to Download",df,"file.csv","text/csv",key='download-csv')
@@ -136,6 +174,15 @@ def translate(word):
         translated = "Not found"
     return translated
 
+def flatten(L):
+    for item in L:
+        try:
+            yield from flatten(item)
+        except TypeError:
+            yield item
+
+def collapse(lst):
+    return ' ' .join(chain.from_iterable(lst))
 
 @st.cache
 def convert_df(df):
