@@ -1,1 +1,1 @@
-python-enchant
+enchant_1.6.0-11.1
