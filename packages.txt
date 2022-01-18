@@ -1,1 +1,1 @@
-enchant_1.6.0-11.1+b1_amd64.deb
+enchant
